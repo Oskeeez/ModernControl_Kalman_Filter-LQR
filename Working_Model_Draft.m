@@ -18,9 +18,9 @@ Lc = 10;
 % Choosing 400km/hr as conservative estimate based on current operating mag
 % levs
 
-vstar = 400 * 1000 / 3600; % Convert speed from km/hr to m/s
+vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
 
-%% Defining States
+%% Defining States (original 4 states)
 % A matrix
 A = [0, 1, 0, 0;
      -kc/M1, -(2*ba1*vstar + dc)/M1, kc/M1, dc/M1;
@@ -46,22 +46,22 @@ disp('Observability rank:'); disp(rank(Ob))
 % definitions to reduce states to 3 (removing absolute positioins for
 % relative)
 
-%% Reducing States to Ensure Full Observability
-% Absolute position is unobservable from velocity sensors alone
-% Redefine states as [delta, v1, v2] where delta = x1-x3 (coupler deflection)
-% Velocity regulation only requires relative position - absolute position is irrelevant
-T = [ 1,  0, -1,  0;   % delta = x1 - x3
-      0,  1,  0,  0;   % v1
-      0,  0,  0,  1];  % v2
+%% States were reduced by hand and are reimplemented below
+A_r = [0,1,-1;
+        (-kc/M1), -(2*ba1*vstar+dc)/M1,dc/M1;
+        kc/M2,dc/M2,-(2*ba2*vstar+dc)/M2];
 
-% Project system matrices into reduced coordinates
-A_r = T * A * pinv(T);   % 3x3
-B_r = T * B;             % 3x1
-C_r = C * pinv(T);       % becomes [0,1,0; 0,0,1]
+B_r = [0;1/M1;0];
+
+C_r = [0,1,0;
+       0,0,1];
+
+sys = ss(A, B, C, D);
 
 % Verify full observability on reduced system
 disp('Reduced observability rank:'); disp(rank(obsv(A_r, C_r)))
 % Rank = 3 Therefore fully observable
+
 
 %% LQR Design
 % Bryson's rule - weights based on maximum allowable deviations
@@ -125,14 +125,18 @@ sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 %% Extract simulation data
 
-sim_time = sim_data.tout;
-Speed1   = squeeze(sim_data.y(1,:))';
-Speed2   = squeeze(sim_data.y(2,:))';
-U        = squeeze(sim_data.u(1,:))';
-Xhat     = squeeze(sim_data.xhat(1,:))';   % [delta_hat, v1_hat, v2_hat]
+% Defining number of frames to cut at so all data has same dimensions
+sim_frame_len = size(sim_data.tout,1)-8;
+sim_time = sim_data.tout(1:(sim_frame_len));
+
+
+Speed1   = squeeze(sim_data.y(1,1:sim_frame_len))';
+Speed2   = squeeze(sim_data.y(2,1:sim_frame_len))';
+U        = sim_data.u;
+% Xhat     = squeeze(sim_data.xhat(1,1:sim_frame_len))';   % [delta_hat, v1_hat, v2_hat]
 
 Delta    = Speed1 - Speed2;           % relative velocity difference
-Delta_hat = Xhat(:,1);               % estimated coupler deflection
+% Delta_hat = Xhat(:,1);               % estimated coupler deflection
 
 %% Figure 1 — Carriage Speeds
 figure(1); clf;
@@ -150,11 +154,11 @@ legend('v2', 'v* = 75 m/s'); grid on
 
 sgtitle('Closed-Loop Speed Regulation')
 
-%% Figure 4 — Control Input (Thrust)
-figure(4); clf;
-plot(sim_time, U, 'k', 'LineWidth', 1.5)
-yline(ustar, 'b--', 'LineWidth', 1)
+%% Figure 2 — Control Input (Thrust)
+figure(2); clf;
+plot(sim_time, U, 'r', 'LineWidth', 1.5)
+yline(ustar, 'g--', 'LineWidth', 1)
 xlabel('Time (s)'); ylabel('Thrust u (N)')
 title('Control Input (Thrust Force)')
-legend('u(t)', sprintf('u* = %.0f N (feedforward)', ustar)); grid on
+legend('u(t) [N]', sprintf('u* = %.0f (Force required to maintain cruise speed [N])', ustar)); grid on
 
