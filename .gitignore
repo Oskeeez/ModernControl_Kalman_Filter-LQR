@@ -1,0 +1,35 @@
+# MATLAB autosave and temp files
+*.asv
+*.autosave
+*.m~
+*.slxc
+*.mex*
+*.p
+*.log
+
+# Simulink generated files
+slprj/
+*_ert_rtw/
+*.rtw
+*.tmwinternal
+
+# MATLAB project files
+resources/project/
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# VS Code (if you ever use it)
+.vscode/
+
+# JetBrains IDEs
+.idea/
+
+# Python cache if using scripts
+__pycache__/
+
+# Generated output folders
+build/
+dist/
+output/
