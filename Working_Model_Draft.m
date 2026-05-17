@@ -120,7 +120,7 @@ Tsim  = 50;                 % simulation duration (s)
 %% Running the simulink file
 % Initial Conditions
 x0 = [0.1; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
-z_hat0 = [0.1; 0; 0];   % initial observer guess [delta, v1, v2]
+z_hat0 = [0.1; 87; 87];   % initial observer guess [delta, v1, v2]
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 
@@ -133,18 +133,28 @@ speed1   = squeeze(sim_data.y(1, 2:sim_frame_len))';
 speed2   = squeeze(sim_data.y(2, 2:sim_frame_len))';
 
 U        = sim_data.u;
-U_time = linspace(sim_time(1), sim_time(end), length(U)); % Creating a time vector for U since it has lower sampling time than others
+U_time = linspace(sim_time(1), sim_time(end), length(U));
 % Xhat     = squeeze(sim_data.xhat(1,1:sim_frame_len))';   % [delta_hat, v1_hat, v2_hat]
 
 Delta    = speed1 - speed2;           % relative velocity difference
 % Delta_hat = Xhat(:,1);               % estimated coupler deflection
 
-%% Acceleration of both carriages
-win = 500;
-speed1_smooth = movmean(speed1, win);
-speed2_smooth = movmean(speed2, win);
-accel1 = gradient(speed1_smooth, sim_time);
-accel2 = gradient(speed2_smooth, sim_time);
+
+%% Extract xhat
+xhat = sim_data.xhat;
+xhat_time = linspace(sim_time(1), sim_time(end), size(xhat, 1));
+%%
+delta_hat  = interp1(xhat_time, xhat(:,1), sim_time);
+speed1_hat = interp1(xhat_time, xhat(:,2), sim_time);
+speed2_hat = interp1(xhat_time, xhat(:,3), sim_time);
+%% Acceleration using F=MA with clean xhat states
+drag1 = ba1 .* speed1_hat.^2;
+drag2 = ba2 .* speed2_hat.^2;
+U_interp = interp1(U_time, U, sim_time, 'linear');
+coupler_force = dc .* (speed1_hat - speed2_hat);
+
+accel1 = (U_interp - coupler_force - drag1) / M1;
+accel2 = (coupler_force - drag2) / M2;
 
 %% Figure 1 — Carriage Speeds
 figure(1); clf;
