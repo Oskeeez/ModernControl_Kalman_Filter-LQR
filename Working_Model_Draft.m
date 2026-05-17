@@ -1,5 +1,5 @@
 % Initialisation
-clear all
+clear 
 close all
 
 student_ID = 11540435;
@@ -18,8 +18,8 @@ Lc = 10;
 % Choosing 400km/hr as conservative estimate based on current operating mag
 % levs
 
-vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
-
+%vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
+vstar = 60;
 %%
 % %% Defining States (original 4 states)
 % % A matrix
@@ -107,6 +107,14 @@ disp('Discrete Kalman gain L_d:'); disp(L_d)
 disp('Controller poles:'); disp(eig(A_d - B_d*K_d))
 disp('Observer poles:');   disp(eig(A_d - L_d*C_d))
 
+
+%% Integral Action
+
+IntGain = 200;
+%SatLimit = 0.12 * ustar;  % Integral contributes max 12% of thrust to prevent overshoot from excessive windup
+SatLimit = 850;
+
+
 %% Simulation Parameters
 zstar = [0.0; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
 Tsim  = 120;                 % simulation duration (s)
@@ -114,8 +122,9 @@ Tsim  = 120;                 % simulation duration (s)
 
 %% Running the simulink file
 % Initial Conditions
-x0 = [0; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
-z_hat0 = [0; 87; 87];   % initial observer guess [delta, v1, v2]
+perturb = 10;
+x0 = [0; vstar-perturb; vstar-perturb];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
+z_hat0 = [0; vstar; vstar];   % initial observer guess [delta, v1, v2]
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 
@@ -123,7 +132,7 @@ sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 % Defining number of frames to cut at so all data has same dimensions
 sim_frame_len = size(sim_data.tout, 1) - 8;
-sim_time = sim_data.tout(2:sim_frame_len);  % start from index 2, not 1
+sim_time = sim_data.tout(2:sim_frame_len);
 speed1   = squeeze(sim_data.y(1, 2:sim_frame_len))';
 speed2   = squeeze(sim_data.y(2, 2:sim_frame_len))';
 
@@ -139,7 +148,7 @@ Delta    = speed1 - speed2;           % relative velocity difference
 xhat = sim_data.xhat;
 xhat_time = (linspace(sim_time(1), sim_time(end), size(xhat, 1)))';
 %%
-delta_hat  = interp1(xhat_time, xhat(:,1), sim_time);
+delta_hat  = -interp1(xhat_time, xhat(:,1), sim_time);
 speed1_hat = interp1(xhat_time, xhat(:,2), sim_time);
 speed2_hat = interp1(xhat_time, xhat(:,3), sim_time);
 %% Acceleration using F=MA with clean xhat states
@@ -147,7 +156,8 @@ drag1 = ba1 .* speed1_hat.^2;
 drag2 = ba2 .* speed2_hat.^2;
 U_interp = interp1(U_time, U, sim_time, 'linear');
 
-coupler_force = kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3;
+%coupler_force = kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3;
+coupler_force = (kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3);
 
 accel1 = (U_interp - coupler_force - drag1) / M1;
 accel2 = (coupler_force - drag2) / M2;
