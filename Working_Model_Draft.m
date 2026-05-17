@@ -20,7 +20,7 @@ Lc = 10;
 
 vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
 
-
+%%
 % %% Defining States (original 4 states)
 % % A matrix
 % A = [0, 1, 0, 0;
@@ -57,7 +57,9 @@ B_r = [0;1/M1;0];
 C_r = [0,1,0;
        0,0,1];
 
-sys = ss(A, B, C, D);
+D_r = [0;0];
+
+sys = ss(A_r, B_r, C_r, D_r);
 
 % Verify full observability on reduced system
 disp('Reduced observability rank:'); disp(rank(obsv(A_r, C_r)))
@@ -114,14 +116,14 @@ disp('Controller poles:'); disp(eig(A_d - B_d*K_d))
 disp('Observer poles:');   disp(eig(A_d - L_d*C_d))
 
 %% Simulation Parameters
-zstar = [0.1; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
+zstar = [0.0; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
 Tsim  = 120;                 % simulation duration (s)
 
 
 %% Running the simulink file
 % Initial Conditions
-x0 = [0.1; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
-z_hat0 = [0.1; 87; 87];   % initial observer guess [delta, v1, v2]
+x0 = [0.0; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
+z_hat0 = [0; 87; 87];   % initial observer guess [delta, v1, v2]
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 
@@ -143,7 +145,7 @@ Delta    = speed1 - speed2;           % relative velocity difference
 
 %% Extract xhat
 xhat = sim_data.xhat;
-xhat_time = linspace(sim_time(1), sim_time(end), size(xhat, 1));
+xhat_time = (linspace(sim_time(1), sim_time(end), size(xhat, 1)))';
 %%
 delta_hat  = interp1(xhat_time, xhat(:,1), sim_time);
 speed1_hat = interp1(xhat_time, xhat(:,2), sim_time);
@@ -152,7 +154,7 @@ speed2_hat = interp1(xhat_time, xhat(:,3), sim_time);
 drag1 = ba1 .* speed1_hat.^2;
 drag2 = ba2 .* speed2_hat.^2;
 U_interp = interp1(U_time, U, sim_time, 'linear');
-coupler_force = dc .* (speed1_hat - speed2_hat);
+coupler_force = kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3;
 
 accel1 = (U_interp - coupler_force - drag1) / M1;
 accel2 = (coupler_force - drag2) / M2;
@@ -181,7 +183,7 @@ xlabel('Time (s)'); ylabel('Thrust u (N)')
 title('Control Input (Thrust Force)')
 legend('u(t) [N]', sprintf('u* = %.0f (Force required to maintain cruise speed [N])', ustar)); grid on
 
-%% Figure 3 — Carriage Accelerations
+%% Figure 3 — Carriage Accelerations (Observer Estimate)
 figure(3); clf;
 subplot(2,1,1)
 plot(sim_time, accel1, 'b', 'LineWidth', 1.5)
@@ -198,3 +200,11 @@ title('Carriage 2 Acceleration')
 legend('a2'); grid on
 
 sgtitle('Closed-Loop Acceleration')
+
+%% Figure 4 - Coupler Deflection From Equilibrium (x1-x3-Lc)
+figure(4); clf;
+plot(sim_time, delta_hat, 'r', 'LineWidth', 1.5)
+yline(0, 'k--')
+xlabel('Time (s)'); ylabel('Coupler Deflection (m)')
+title('Coupler Deflection \delta = x_1 - x_3 - L_c')
+legend('\delta hat'); grid on
