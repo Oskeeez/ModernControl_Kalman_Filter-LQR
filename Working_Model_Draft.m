@@ -19,32 +19,33 @@ Lc = 10;
 % levs
 
 vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
-%vstar = 30;
-%% Defining States (original 4 states)
-% A matrix
-A = [0, 1, 0, 0;
-     -kc/M1, -(2*ba1*vstar + dc)/M1, kc/M1, dc/M1;
-     0, 0, 0, 1;
-     kc/M2, dc/M2, -kc/M2, -(2*ba2*vstar + dc)/M2];
-% B matrix
-B = [0; 1/M1; 0; 0];
-% C matrix - velocity measurements only
-C = [0,1,0,0;0,0,0,1];
-% D matrix
-D = [0;0];
 
-%% Building State Space Model
-sys = ss(A, B, C, D);
-% Checking controllability
-Co = ctrb(sys);
-disp('Controllability rank:'); disp(rank(Co))
-% Rank = 4 Therefore controllable
-% Checking observability
-Ob = obsv(sys);
-disp('Observability rank:'); disp(rank(Ob))
-% Rank = 3 Therefore not fully observable - we need to change state
-% definitions to reduce states to 3 (removing absolute positioins for
-% relative)
+
+% %% Defining States (original 4 states)
+% % A matrix
+% A = [0, 1, 0, 0;
+%      -kc/M1, -(2*ba1*vstar + dc)/M1, kc/M1, dc/M1;
+%      0, 0, 0, 1;
+%      kc/M2, dc/M2, -kc/M2, -(2*ba2*vstar + dc)/M2];
+% % B matrix
+% B = [0; 1/M1; 0; 0];
+% % C matrix - velocity measurements only
+% C = [0,1,0,0;0,0,0,1];
+% % D matrix
+% D = [0;0];
+% 
+% %% Building State Space Model
+% sys_unreduced = ss(A, B, C, D);
+% % Checking controllability
+% Co = ctrb(sys_unreduced);
+% disp('Controllability rank:'); disp(rank(Co))
+% % Rank = 4 Therefore controllable
+% % Checking observability
+% Ob = obsv(sys_unreduced);
+% disp('Observability rank:'); disp(rank(Ob))
+% % Rank = 3 Therefore not fully observable - we need to change state
+% % definitions to reduce states to 3 (removing absolute positioins for
+% % relative)
 
 %% States were reduced by hand and are reimplemented below
 A_r = [0,1,-1;
@@ -114,7 +115,7 @@ disp('Observer poles:');   disp(eig(A_d - L_d*C_d))
 
 %% Simulation Parameters
 zstar = [0.1; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
-Tsim  = 50;                 % simulation duration (s)
+Tsim  = 120;                 % simulation duration (s)
 
 
 %% Running the simulink file
