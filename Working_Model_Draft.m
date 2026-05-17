@@ -19,7 +19,7 @@ Lc = 10;
 % levs
 
 vstar = 350 * 1000 / 3600; % Convert speed from km/hr to m/s
-
+%vstar = 30;
 %% Defining States (original 4 states)
 % A matrix
 A = [0, 1, 0, 0;
@@ -74,12 +74,13 @@ ustar = (ba1 + ba2) * vstar^2;
 max_u = 1.1 * ustar;  % max allowable thrust (N)
 
 Q = diag([(1/max_delta^2)*10, 1/max_x2^2, 1/max_x4^2]);
-R = (1/max_u^2)*80;
+R = (1/max_u^2)*500;
 
 %% Discretising the System
 % Sample time chosen as 20x faster than the fastest continuous pole
 fastest_pole = max(abs(real(eig(A_r))));
-Ts = 1 / (20 * fastest_pole);
+%Ts = 1 / (20 * fastest_pole);
+Ts = 0.01;
 disp('Sample time (s):'); disp(Ts)
 
 sys_rd = c2d(ss(A_r, B_r, C_r, zeros(2,1)), Ts, 'zoh');
@@ -112,53 +113,77 @@ disp('Controller poles:'); disp(eig(A_d - B_d*K_d))
 disp('Observer poles:');   disp(eig(A_d - L_d*C_d))
 
 %% Simulation Parameters
-zstar = [Lc; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
-Tsim  = 45;                 % simulation duration (s)
+zstar = [0.1; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
+Tsim  = 50;                 % simulation duration (s)
 
 
 %% Running the simulink file
 % Initial Conditions
-x0 = [Lc; 0; 0];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
-z_hat0 = [Lc; vstar; vstar];   % initial observer guess [delta, v1, v2]
+x0 = [0.1; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
+z_hat0 = [0.1; 0; 0];   % initial observer guess [delta, v1, v2]
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
 
 %% Extract simulation data
 
 % Defining number of frames to cut at so all data has same dimensions
-sim_frame_len = size(sim_data.tout,1)-8;
-sim_time = sim_data.tout(1:(sim_frame_len));
+sim_frame_len = size(sim_data.tout, 1) - 8;
+sim_time = sim_data.tout(2:sim_frame_len);  % start from index 2, not 1
+speed1   = squeeze(sim_data.y(1, 2:sim_frame_len))';
+speed2   = squeeze(sim_data.y(2, 2:sim_frame_len))';
 
-
-Speed1   = squeeze(sim_data.y(1,1:sim_frame_len))';
-Speed2   = squeeze(sim_data.y(2,1:sim_frame_len))';
 U        = sim_data.u;
+U_time = linspace(sim_time(1), sim_time(end), length(U)); % Creating a time vector for U since it has lower sampling time than others
 % Xhat     = squeeze(sim_data.xhat(1,1:sim_frame_len))';   % [delta_hat, v1_hat, v2_hat]
 
-Delta    = Speed1 - Speed2;           % relative velocity difference
+Delta    = speed1 - speed2;           % relative velocity difference
 % Delta_hat = Xhat(:,1);               % estimated coupler deflection
+
+%% Acceleration of both carriages
+win = 500;
+speed1_smooth = movmean(speed1, win);
+speed2_smooth = movmean(speed2, win);
+accel1 = gradient(speed1_smooth, sim_time);
+accel2 = gradient(speed2_smooth, sim_time);
 
 %% Figure 1 — Carriage Speeds
 figure(1); clf;
 subplot(2,1,1)
-plot(sim_time, Speed1, 'b', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
+plot(sim_time, speed1, 'b', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
 xlabel('Time (s)'); ylabel('Speed (m/s)')
 title('Carriage 1 Speed vs Cruise')
-legend('v1', 'v* = 75 m/s'); grid on
+legend('v1', sprintf('v* = %.0f m/s', vstar)); grid on
 
 subplot(2,1,2)
-plot(sim_time, Speed2, 'r', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
+plot(sim_time, speed2, 'r', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
 xlabel('Time (s)'); ylabel('Speed (m/s)')
 title('Carriage 2 Speed vs Cruise')
-legend('v2', 'v* = 75 m/s'); grid on
+legend('v2', sprintf('v* = %.0f m/s', vstar)); grid on
 
 sgtitle('Closed-Loop Speed Regulation')
 
 %% Figure 2 — Control Input (Thrust)
 figure(2); clf;
-plot(sim_time, U, 'r', 'LineWidth', 1.5)
+plot(U_time, U, 'r', 'LineWidth', 1.5)
 yline(ustar, 'g--', 'LineWidth', 1)
 xlabel('Time (s)'); ylabel('Thrust u (N)')
 title('Control Input (Thrust Force)')
 legend('u(t) [N]', sprintf('u* = %.0f (Force required to maintain cruise speed [N])', ustar)); grid on
 
+%% Figure 3 — Carriage Accelerations
+figure(3); clf;
+subplot(2,1,1)
+plot(sim_time, accel1, 'b', 'LineWidth', 1.5)
+yline(0, 'k--')
+xlabel('Time (s)'); ylabel('Acceleration (m/s²)')
+title('Carriage 1 Acceleration')
+legend('a1'); grid on
+
+subplot(2,1,2)
+plot(sim_time, accel2, 'r', 'LineWidth', 1.5)
+yline(0, 'k--')
+xlabel('Time (s)'); ylabel('Acceleration (m/s²)')
+title('Carriage 2 Acceleration')
+legend('a2'); grid on
+
+sgtitle('Closed-Loop Acceleration')
