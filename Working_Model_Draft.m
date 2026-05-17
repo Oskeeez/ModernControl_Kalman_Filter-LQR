@@ -15,7 +15,7 @@ knl = 1e4; % Coupler's Nonlinear Spring Constant
 Lc = 10; % Natural Length of Coupler
 
 %% Operating Point
-% Choosing 400km/hr as conservative estimate based on current operating mag
+% Choosing 360 km/hr as conservative estimate based on current operating mag
 % levs
 
 vstar = 360 * 1000 / 3600;                    % Convert speed from km/hr to m/s
@@ -62,11 +62,6 @@ C_r = [0,1,0;
 D_r = [0;0];
 
 sys = ss(A_r, B_r, C_r, D_r);
-
-% Checking full observability
-disp('Reduced observability rank:'); disp(rank(obsv(A_r, C_r)))
-% Rank = 3 Therefore fully observable
-
 
 %% LQR Design
 
@@ -124,9 +119,7 @@ perturb = 10;                % Initial Speed error
 x0 = [0; vstar-perturb; vstar-perturb];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
 z_hat0 = [0; vstar-perturb; vstar-perturb];   % initial observer guess [delta, v1, v2]
 
-
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
-
 
 %% Extract simulation data
 
@@ -138,30 +131,21 @@ speed2 = squeeze(sim_data.y(2, 2:sim_frame_len))';
 
 U = sim_data.u;
 U_time = linspace(sim_time(1), sim_time(end), length(U));
-% Xhat     = squeeze(sim_data.xhat(1,1:sim_frame_len))';   % [delta_hat, v1_hat, v2_hat]
-
 Delta    = speed1 - speed2;           % relative velocity difference
-% Delta_hat = Xhat(:,1);               % estimated coupler deflection
-
 
 %% Extract xhat
 xhat = sim_data.xhat;
 xhat_time = (linspace(sim_time(1), sim_time(end), size(xhat, 1)))';
-%%
+
 delta_hat  = -interp1(xhat_time, xhat(:,1), sim_time);
 speed1_hat = interp1(xhat_time, xhat(:,2), sim_time);
 speed2_hat = interp1(xhat_time, xhat(:,3), sim_time);
 
 %% Acceleration using F=MA with clean xhat states
-% drag1 = ba1 .* speed1_hat.^2;
-% drag2 = ba2 .* speed2_hat.^2;
-% U_interp = interp1(U_time, U, sim_time, 'linear');
-% 
-% coupler_force = (kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3);
-% 
-% accel1 = (U_interp - coupler_force - drag1 - drag2) / M1;
-% accel2 = (coupler_force - drag2) / M2;
-win = 700;
+
+win = 700; % Size of the window to average over
+
+% Calculating accelerations based on filtered speed estimates
 accel1 = gradient(movmean(speed1_hat, [win 0]), sim_time);
 accel2 = gradient(movmean(speed2_hat, [win 0]), sim_time);
 
