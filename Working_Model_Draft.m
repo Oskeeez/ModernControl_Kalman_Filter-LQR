@@ -96,16 +96,8 @@ K_d = dlqr(A_d, B_d, Q, R);
 disp('Discrete LQR gain K_d:'); disp(K_d)
 
 %% Discrete Kalman Filter
-% Bryson's rule - weights based on expected noise magnitudes
-max_delta_noise = 0.01;  % coupler position uncertainty (m)
-max_v1_noise    = 0.05;  % velocity process noise (m/s)
-max_v2_noise    = 0.05;
-Q_kf = diag([1/max_delta_noise^2, 1/max_v1_noise^2, 1/max_v2_noise^2]);
-
-% Velocity sensor accuracy
-max_v1_sensor = 0.08;    % (m/s)
-max_v2_sensor = 0.08;
-R_kf = diag([1/max_v1_sensor^2, 1/max_v2_sensor^2]);
+Q_kf = diag([1e-4, 1e-4, 1e-4]);
+R_kf = diag([0.01, 0.01]);
 
 [L_d, ~, ~] = dlqe(A_d, eye(3), C_d, Q_kf, R_kf);
 disp('Discrete Kalman gain L_d:'); disp(L_d)
@@ -122,7 +114,7 @@ Tsim  = 120;                 % simulation duration (s)
 
 %% Running the simulink file
 % Initial Conditions
-x0 = [0.0; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
+x0 = [0; 87; 87];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
 z_hat0 = [0; 87; 87];   % initial observer guess [delta, v1, v2]
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
@@ -154,6 +146,7 @@ speed2_hat = interp1(xhat_time, xhat(:,3), sim_time);
 drag1 = ba1 .* speed1_hat.^2;
 drag2 = ba2 .* speed2_hat.^2;
 U_interp = interp1(U_time, U, sim_time, 'linear');
+
 coupler_force = kc .* delta_hat + dc .* (speed1_hat - speed2_hat) + knl .* delta_hat.^3;
 
 accel1 = (U_interp - coupler_force - drag1) / M1;
@@ -162,16 +155,22 @@ accel2 = (coupler_force - drag2) / M2;
 %% Figure 1 — Carriage Speeds
 figure(1); clf;
 subplot(2,1,1)
-plot(sim_time, speed1, 'b', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
+plot(sim_time, speed1, 'Color', [0.5 0.7 1], 'LineWidth', 0.8)      
+hold on
+plot(sim_time, speed1_hat, 'b', 'LineWidth', 1.5)                    
+plot(sim_time, ones(size(sim_time))*vstar, 'color', [1, 0.5, 0], 'LineWidth', 1.5,'LineStyle',':')  
 xlabel('Time (s)'); ylabel('Speed (m/s)')
 title('Carriage 1 Speed vs Cruise')
-legend('v1', sprintf('v* = %.0f m/s', vstar)); grid on
+legend('v1 measured', 'v1 estimated', sprintf('v* = %.0f m/s', vstar)); grid on
 
 subplot(2,1,2)
-plot(sim_time, speed2, 'r', sim_time, ones(size(sim_time))*vstar, 'k--', 'LineWidth', 1.5)
+plot(sim_time, speed2, 'Color', [1 0.6 0.6], 'LineWidth', 0.8)       
+hold on
+plot(sim_time, speed2_hat, 'r', 'LineWidth', 1.5)                    
+plot(sim_time, ones(size(sim_time))*vstar, 'color', [1, 0.5, 0], 'LineWidth', 1.5,'LineStyle',':')   
 xlabel('Time (s)'); ylabel('Speed (m/s)')
 title('Carriage 2 Speed vs Cruise')
-legend('v2', sprintf('v* = %.0f m/s', vstar)); grid on
+legend('v2 measured', 'v2 estimated', sprintf('v* = %.0f m/s', vstar)); grid on
 
 sgtitle('Closed-Loop Speed Regulation')
 
@@ -208,3 +207,4 @@ yline(0, 'k--')
 xlabel('Time (s)'); ylabel('Coupler Deflection (m)')
 title('Coupler Deflection \delta = x_1 - x_3 - L_c')
 legend('\delta hat'); grid on
+
