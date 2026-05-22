@@ -98,7 +98,7 @@ disp('Discrete LQR gain K_d:'); disp(K_d)
 Q_kf = 0.5*diag([1e-4, 1e-4, 1e-4]);
 R_kf = diag([0.01, 0.01]);
 
-% Note - used to show observer poles next (not for simulink implementation)
+% Note - used to show observer poles (not for simulink implementation)
 [L_d, ~, ~] = dlqe(A_d, eye(3), C_d, Q_kf, R_kf); 
 disp('Discrete Kalman gain L_d:'); disp(L_d)
 
@@ -114,10 +114,10 @@ SatLimit = 0.12 * ustar;  % Integral contributes max 12% of thrust to prevent ov
 
 %% Simulation Parameters
 zstar = [0; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
-Tsim  = 250;                 % simulation duration (s)
+Tsim  = 120;                 % simulation duration (s)
 perturb = 10;                % Initial Speed error
-x0 = [0; vstar-perturb; vstar-perturb];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
-z_hat0 = [0; vstar-perturb; vstar-perturb];   % initial observer guess [delta, v1, v2]
+x0 = [0.1; vstar-perturb; vstar-perturb];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
+z_hat0 = [0.1; vstar-perturb; vstar-perturb];   % initial observer guess [delta, v1, v2]
 
 sim_data = sim('Train_Model_Real.slx', 'StopTime', num2str(Tsim));
 
