@@ -114,7 +114,7 @@ SatLimit = 0.12 * ustar;  % Integral contributes max 12% of thrust to prevent ov
 
 %% Simulation Parameters
 zstar = [0; vstar; vstar];  % desired reduced state [delta*, v1*, v2*]
-Tsim  = 120;                 % simulation duration (s)
+Tsim  = 60;                 % simulation duration (s)
 perturb = 10;                % Initial Speed error
 x0 = [0.1; vstar-perturb; vstar-perturb];   % [Lc, v1, v2] - both carriages at cruise, separated by Lc
 z_hat0 = [0.1; vstar-perturb; vstar-perturb];   % initial observer guess [delta, v1, v2]
