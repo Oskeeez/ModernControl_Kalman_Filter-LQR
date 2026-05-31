@@ -149,59 +149,119 @@ win = 700; % Size of the window to average over
 accel1 = gradient(movmean(speed1_hat, [win 0]), sim_time);
 accel2 = gradient(movmean(speed2_hat, [win 0]), sim_time);
 
+%% Common Figure Styling
+set(groot,'defaultAxesFontSize',14)
+set(groot,'defaultLineLineWidth',1.8)
+
 %% Figure 1 — Carriage Speeds
 figure(1); clf;
+set(gcf,'Color','w');
+set(gcf,'Position',[100 100 700 500]);
+
 subplot(2,1,1)
-plot(sim_time, speed1, 'Color', [0.5 0.7 1], 'LineWidth', 0.8)      
+plot(sim_time, speed1, 'Color', [0.5 0.7 1])
 hold on
-plot(sim_time, speed1_hat, 'b', 'LineWidth', 1.5)                    
-plot(sim_time, ones(size(sim_time))*vstar, 'color', [1, 0.5, 0], 'LineWidth', 1.5,'LineStyle',':')  
-xlabel('Time (s)'); ylabel('Speed (m/s)')
-title('Carriage 1 Speed vs Cruise')
-legend('v1 measured', 'v1 estimated', sprintf('v* = %.0f m/s', vstar)); grid on
+plot(sim_time, speed1_hat, 'b')
+plot(sim_time, ones(size(sim_time))*vstar, ...
+    'Color', [1 0.5 0], ...
+    'LineStyle', ':')
+
+xlabel('Time (s)')
+ylabel('Speed (m/s)')
+
+legend( ...
+    'Measured', ...
+    'Estimated', ...
+    sprintf('v^* = %.0f m/s', vstar), ...
+    'Location','best')
+
+grid on
+box on
 
 subplot(2,1,2)
-plot(sim_time, speed2, 'Color', [1 0.6 0.6], 'LineWidth', 0.8)       
+plot(sim_time, speed2, 'Color', [1 0.6 0.6])
 hold on
-plot(sim_time, speed2_hat, 'r', 'LineWidth', 1.5)                    
-plot(sim_time, ones(size(sim_time))*vstar, 'color', [1, 0.5, 0], 'LineWidth', 1.5,'LineStyle',':')   
-xlabel('Time (s)'); ylabel('Speed (m/s)')
-title('Carriage 2 Speed vs Cruise')
-legend('v2 measured', 'v2 estimated', sprintf('v* = %.0f m/s', vstar)); grid on
+plot(sim_time, speed2_hat, 'r')
+plot(sim_time, ones(size(sim_time))*vstar, ...
+    'Color', [1 0.5 0], ...
+    'LineStyle', ':')
 
-sgtitle('Closed-Loop Speed Regulation')
+xlabel('Time (s)')
+ylabel('Speed (m/s)')
 
-%% Figure 2 — Control Input (Thrust)
+legend( ...
+    'Measured', ...
+    'Estimated', ...
+    sprintf('v^* = %.0f m/s', vstar), ...
+    'Location','best')
+
+grid on
+box on
+
+%% Figure 2 — Control Input
 figure(2); clf;
-plot(U_time, U, 'r', 'LineWidth', 1.5)
-yline(ustar, 'g--', 'LineWidth', 1)
-xlabel('Time (s)'); ylabel('Thrust u (N)')
-title('Control Input (Thrust Force)')
-legend('u(t) [N]', sprintf('u* = %.0f (Force required to maintain cruise speed [N])', ustar)); grid on
+set(gcf,'Color','w');
+set(gcf,'Position',[100 100 700 300]);
 
-%% Figure 3 — Carriage Accelerations (Observer Estimate)
+plot(U_time, U, 'r')
+hold on
+yline(ustar, 'k--', 'LineWidth',1.5)
+
+xlabel('Time (s)')
+ylabel('Thrust (N)')
+
+legend( ...
+    'u(t)', ...
+    sprintf('u^* = %.0f N', ustar), ...
+    'Location','best')
+
+grid on
+box on
+
+%% Figure 3 — Accelerations
 figure(3); clf;
+set(gcf,'Color','w');
+set(gcf,'Position',[100 100 700 500]);
+
 subplot(2,1,1)
-plot(sim_time, accel1, 'b', 'LineWidth', 1.5)
-yline(0, 'k--')
-xlabel('Time (s)'); ylabel('Acceleration (m/s²)')
-title('Carriage 1 Acceleration')
-legend('a1'); grid on
+plot(sim_time, accel1, 'b')
+hold on
+yline(0, 'k--', 'LineWidth',1.2)
+
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+
+legend('a_1','Location','best')
+
+grid on
+box on
 
 subplot(2,1,2)
-plot(sim_time, accel2, 'r', 'LineWidth', 1.5)
-yline(0, 'k--')
-xlabel('Time (s)'); ylabel('Acceleration (m/s²)')
-title('Carriage 2 Acceleration')
-legend('a2'); grid on
+plot(sim_time, accel2, 'r')
+hold on
+yline(0, 'k--', 'LineWidth',1.2)
 
-sgtitle('Closed-Loop Acceleration')
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
 
-%% Figure 4 - Coupler Deflection From Equilibrium (x1-x3-Lc)
+legend('a_2','Location','best')
+
+grid on
+box on
+
+%% Figure 4 — Coupler Deflection
 figure(4); clf;
-plot(sim_time, delta_hat, 'r', 'LineWidth', 1.5)
-yline(0, 'k--')
-xlabel('Time (s)'); ylabel('Coupler Deflection (m)')
-title('Coupler Deflection \delta = x_1 - x_3 - L_c')
-legend('\delta hat'); grid on
+set(gcf,'Color','w');
+set(gcf,'Position',[100 100 700 300]);
 
+plot(sim_time, delta_hat, 'r')
+hold on
+yline(0, 'k--', 'LineWidth',1.2)
+
+xlabel('Time (s)')
+ylabel('\delta (m)')
+
+legend('\hat{\delta}','Location','best')
+
+grid on
+box on
