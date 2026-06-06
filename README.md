@@ -1,4 +1,4 @@
-# ModernControl_Kalman_Filter-LQR
+# maglev-train-lqr-control
 Output feedback controller implementing Kalman filter,  LQR and integral control with output saturation to model and simulate a magnetic levitation train system with two carriages. 
 
 Metrics:
